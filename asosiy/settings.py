@@ -35,7 +35,7 @@ INSTALLED_APPS = [
 
     # men qoshgan app
     'users',
-    'kamera'
+    'kamera.apps.KameraConfig'
 ]
 
 MIDDLEWARE = [

@@ -22,3 +22,11 @@ def video_feed(request):
 
 def index(request):
     return render(request, 'kamera/index.html')
+
+from django.shortcuts import render
+from .models import Bino
+
+def home(request):
+    binolar = Bino.objects.prefetch_related('kameralar').all()
+    return render(request, 'kamera/home.html', {'binolar': binolar})
+
