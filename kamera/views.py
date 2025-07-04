@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from django.http import StreamingHttpResponse
 import cv2
+from django.shortcuts import render, get_object_or_404
+from .models import Camera
+
 
 # IP kamera URL (o‘zingizniki bilan almashtiring)
 camera_url = "rtsp://admin:990507817a@192.168.200.5:554/h264"
@@ -29,4 +32,8 @@ from .models import Bino
 def home(request):
     binolar = Bino.objects.prefetch_related('kameralar').all()
     return render(request, 'kamera/home.html', {'binolar': binolar})
+
+def camera_detail(request, pk):
+    camera = get_object_or_404(Camera, pk=pk)
+    return render(request, 'kamera/camera_detail.html', {'camera': camera})
 

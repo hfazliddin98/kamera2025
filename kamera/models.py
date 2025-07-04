@@ -13,15 +13,19 @@ class Camera(models.Model):
     port = models.IntegerField(default=554)
     ip = models.CharField(max_length=100)
     chanel = models.CharField(max_length=100)
-    username = models.CharField(max_length=50)
-    password = models.CharField(max_length=50)
+    username = models.CharField(max_length=50, default='admin')
+    password = models.CharField(max_length=50, default='990507817a')
+    youtube = models.BooleanField(default=False)
+    link = models.CharField(max_length=500, blank=True)
 
 
     def rtsp_url(self):
+        base_url = f"{self.ip}:{self.port}/Streaming/Channels/{self.chanel}/"
         if self.username and self.password:
-            return f"rtsp://{self.username}:{self.password}@{self.ip}:{self.port}/Streaming/Channels/{self.chanel}/"
+            return f"rtsp://{self.username}:{self.password}@{base_url}"
         else:
-            return f"rtsp://{self.ip}:{self.port}/Streaming/Channels/101/"
+            return f"rtsp://{base_url}"
+
 
     def __str__(self):
         return f"{self.bino.name} - {self.name}"

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Bino kameralar</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        video {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bino bo‘yicha kameralar</h1>
+
+    {% for bino in binolar %}
+        <h2>{{ bino.name }}</h2>  {# ✅ bino.nom -> bino.name #}
+        {% for camera in bino.kameralar.all %}
+            <h4>{{ camera.name }}</h4>
+            <a href="{% url 'camera_detail' camera.id %}">{{ camera.name }}</a>
+            <video id="video{{ camera.id }}" width="640" height="360" controls autoplay muted></video>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const video = document.getElementById("video{{ camera.id }}");
+                    const hlsSrc = "/media/hls/cam_{{ camera.id }}/stream.m3u8";
+
+                    if (Hls.isSupported()) {
+                        const hls = new Hls();
+                        hls.loadSource(hlsSrc);
+                        hls.attachMedia(video);
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = hlsSrc;
+                    } else {
+                        console.error("HLS qo‘llab-quvvatlanmaydi.");
+                    }
+                });
+            </script>
+            <hr>
+        {% empty %}
+            <p>Kamera mavjud emas.</p>
+        {% endfor %}
+    {% empty %}
+        <p>Hech qanday bino mavjud emas.</p>
+    {% endfor %}
+</body>
+</html>
