@@ -94,11 +94,18 @@
             border-radius: 8px;
             margin-bottom: 20px;
             transition: transform 0.3s;
+            background-color: white;
         }
         
         .camera-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        .camera-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e3e6f0;
+            position: relative;
         }
         
         .video-container {
@@ -109,12 +116,14 @@
             background-color: #000;
         }
         
-        .video-container video {
+        .video-container video,
+        .video-container iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            border: none;
         }
         
         .status-badge {
@@ -173,15 +182,14 @@
                 <img src="{% static 'images/logo.png' %}" alt="QDU" class="me-2" style="height: 40px;">
                 <span>Qo'qon Davlat Universiteti</span>
             </a>
-            
-            
+        </div>
     </nav>
+    
     <!-- Asosiy kontent -->
     <div class="main-content container">
         <!-- Sarlavha -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="mb-0"><i class="fas fa-video me-2"></i>Bino kameralari</h2>
-            
         </div>
         
         <!-- Binolar va kameralar ro'yxati -->
@@ -198,8 +206,8 @@
                 <div class="row">
                     {% for camera in bino.kameralar.all %}
                     <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="camera-card h-100">
-                            <div class="camera-header position-relative">
+                        <div class="camera-card">
+                            <div class="camera-header">
                                 <h5 class="mb-0">
                                     <span class="status-badge status-active"></span>
                                     {{ camera.name }}
@@ -212,13 +220,22 @@
                             </div>
                             
                             <div class="video-container">
-                                <video id="video{{ camera.id }}" controls autoplay muted></video>
+                                {% if camera.youtube %}
+                                    <!-- YouTube iframe - to'g'ridan-to'g'ri linkni ishlatamiz -->
+                                    <iframe id="youtube{{ camera.id }}" 
+                                            src="{{ camera.link }}" 
+                                            frameborder="0" 
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                            allowfullscreen></iframe>
+                                {% else %}
+                                    <!-- Oddiy HLS video -->
+                                    <video id="video{{ camera.id }}" controls autoplay muted></video>
+                                {% endif %}
                             </div>
-                            
-                            
                         </div>
                     </div>
                     
+                    {% if not camera.youtube %}
                     <script>
                         document.addEventListener("DOMContentLoaded", function () {
                             const video = document.getElementById("video{{ camera.id }}");
@@ -268,6 +285,7 @@
                             }
                         });
                     </script>
+                    {% endif %}
                     {% empty %}
                     <div class="col-12">
                         <div class="no-cameras">
@@ -295,40 +313,39 @@
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- HLS.js -->
+    <!-- HLS.js (faqat oddiy kameralar uchun) -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     
     <!-- Custom JS -->
     <script>
-        // Video pleylar uchun qo'shimcha funksional
         document.addEventListener("DOMContentLoaded", function() {
             // To'liq ekran rejimi
-            function setupFullscreen(videoId) {
-                const video = document.getElementById(videoId);
-                const container = video.parentElement;
+            function setupFullscreen(elementId) {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                const container = element.parentElement;
                 
                 container.addEventListener('dblclick', function() {
-                    if (video.requestFullscreen) {
-                        video.requestFullscreen();
-                    } else if (video.webkitRequestFullscreen) {
-                        video.webkitRequestFullscreen();
-                    } else if (video.msRequestFullscreen) {
-                        video.msRequestFullscreen();
+                    if (element.requestFullscreen) {
+                        element.requestFullscreen();
+                    } else if (element.webkitRequestFullscreen) {
+                        element.webkitRequestFullscreen();
+                    } else if (element.msRequestFullscreen) {
+                        element.msRequestFullscreen();
                     }
                 });
             }
             
-            
-            // Navbar dropdown menyularini ishlatish
-            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
-            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-                return new bootstrap.Dropdown(dropdownToggleEl);
+            // Barcha video elementlari uchun to'liq ekran rejimi
+            document.querySelectorAll('video').forEach(video => {
+                setupFullscreen(video.id);
             });
             
-            // 1 daqiqada bir statusni tekshirish
-            setInterval(function() {
-                // Bu yerda kamera statusini tekshirish kodi bo'lishi kerak
-            }, 60000);
+            // Barcha YouTube iframe'lari uchun to'liq ekran rejimi
+            document.querySelectorAll('iframe[id^="youtube"]').forEach(iframe => {
+                setupFullscreen(iframe.id);
+            });
         });
     </script>
 </body>
