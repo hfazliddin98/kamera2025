@@ -15,7 +15,7 @@ SECRET_KEY = 'django-insecure-f&b8bd%ml)xh*fnoevnyv0pz9gz2((cft2z1id-$jn-vm9v4!s
 DEBUG = True
 
 # DOMEN = 'omborxona2024.pythonanywhere.com'
-DOMEN = 'live.kspi.uz'
+DOMEN = 'live1.kspi.uz'
 LOCAL_DOMEN = '127.0.0.1'
 
 ALLOWED_HOSTS = ['.kokanddeveloper.uz', DOMEN, 'localhost', LOCAL_DOMEN]

@@ -53,35 +53,3 @@ class KameraConfig(AppConfig):
         threading.Thread(target=start_all_cameras, daemon=True).start()
 
 
-
-
-# from django.apps import AppConfig
-# import subprocess
-# import os
-
-# class StreamappConfig(AppConfig):
-#     default_auto_field = 'django.db.models.BigAutoField'
-#     name = 'streamapp'
-
-#     def ready(self):
-#         # Ffmpeg komandani ishga tushurish
-#         ffmpeg_cmd = [
-#             "ffmpeg",
-#             "-i", "rtsp://admin:990507817a@192.168.200.5:554/stream",
-#             "-c:v", "libx264",
-#             "-f", "hls",
-#             "-hls_time", "5",
-#             "-hls_list_size", "6",
-#             "-hls_flags", "delete_segments",
-#             "media/hls/stream.m3u8"
-#         ]
-
-#         # HLS katalogi mavjud bo‘lmasa, yaratamiz
-#         os.makedirs("media/hls/", exist_ok=True)
-
-#         # Stream jarayonini ishga tushirish (agar hali yo‘q bo‘lsa)
-#         try:
-#             subprocess.Popen(ffmpeg_cmd)
-#             print("🎥 FFMPEG kamerani yozishni boshladi.")
-#         except Exception as e:
-#             print("❌ FFMPEGni ishga tushirishda xatolik:", e)
