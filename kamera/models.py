@@ -11,12 +11,14 @@ class Camera(models.Model):
     bino = models.ForeignKey(Bino, on_delete=models.CASCADE, related_name='kameralar')
     name = models.CharField(max_length=100)
     port = models.IntegerField(default=554)
-    ip = models.CharField(max_length=100)
-    chanel = models.CharField(max_length=100)
+    ip = models.CharField(max_length=100, blank=True)
+    chanel = models.CharField(max_length=100, blank=True)
     username = models.CharField(max_length=50, default='admin')
     password = models.CharField(max_length=50, default='990507817a')
     youtube = models.BooleanField(default=False)
     link = models.CharField(max_length=500, blank=True)
+    sayt = models.BooleanField(default=False)
+    sayt_link = models.CharField(max_length=500, blank=True)
 
 
     def rtsp_url(self):
