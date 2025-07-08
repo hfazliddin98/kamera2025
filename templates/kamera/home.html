@@ -16,6 +16,7 @@
             --secondary-color: #2c3e50;
             --success-color: #1cc88a;
             --danger-color: #e74a3b;
+            --warning-color: #f6c23e;
             --navbar-color: #3a3b45;
         }
         
@@ -38,34 +39,6 @@
         
         .navbar-custom .navbar-brand:hover {
             color: #d1d3e2;
-        }
-        
-        .navbar-custom .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.5rem 1rem;
-        }
-        
-        .navbar-custom .nav-link:hover {
-            color: white;
-        }
-        
-        .navbar-custom .nav-link.active {
-            color: white;
-            font-weight: 600;
-        }
-        
-        .navbar-custom .dropdown-menu {
-            background-color: var(--secondary-color);
-            border: none;
-        }
-        
-        .navbar-custom .dropdown-item {
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .navbar-custom .dropdown-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
         }
         
         /* Asosiy kontent */
@@ -142,6 +115,10 @@
             background-color: var(--danger-color);
         }
         
+        .status-loading {
+            background-color: var(--warning-color);
+        }
+        
         .camera-actions {
             position: absolute;
             top: 10px;
@@ -163,6 +140,16 @@
             margin-top: 40px;
         }
         
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            width: 90%;
+        }
+        
         @media (max-width: 768px) {
             .video-container {
                 padding-bottom: 75%; /* 4:3 aspect ratio for mobile */
@@ -171,12 +158,16 @@
             body {
                 padding-top: 56px;
             }
+            
+            .camera-card {
+                margin-bottom: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="#">
                 <img src="{% static 'images/logo.png' %}" alt="QDU" class="me-2" style="height: 40px;">
@@ -209,7 +200,7 @@
                         <div class="camera-card">
                             <div class="camera-header">
                                 <h5 class="mb-0">
-                                    <span class="status-badge status-active"></span>
+                                    <span class="status-badge {% if camera.is_active %}status-active{% else %}status-inactive{% endif %}"></span>
                                     {{ camera.name }}
                                 </h5>
                                 <div class="camera-actions">
@@ -221,55 +212,72 @@
                             
                             <div class="video-container">
                                 {% if camera.youtube %}
-                                    <!-- YouTube iframe - to'g'ridan-to'g'ri linkni ishlatamiz -->
+                                    <!-- YouTube iframe -->
                                     <iframe id="youtube{{ camera.id }}" 
                                             src="{{ camera.link }}" 
                                             frameborder="0" 
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                                             allowfullscreen></iframe>
                                 {% else %}
-                                    <!-- Oddiy HLS video -->
+                                    <!-- HLS video -->
                                     <video id="video{{ camera.id }}" controls autoplay muted></video>
+                                    <div id="error{{ camera.id }}" class="error-message d-none"></div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                     
-                    {% if not camera.youtube %}
+                    {% if not camera.youtube and camera.is_active %}
                     <script>
                         document.addEventListener("DOMContentLoaded", function () {
                             const video = document.getElementById("video{{ camera.id }}");
-                            const hlsSrc = "/media/hls/cam_{{ camera.id }}/stream.m3u8";
+                            const errorDiv = document.getElementById("error{{ camera.id }}");
+                            const statusBadge = document.querySelector("#video{{ camera.id }}").closest('.camera-card').querySelector('.status-badge');
+                            
+                            // Yuklash holatini ko'rsatish
+                            statusBadge.classList.remove('status-active', 'status-inactive');
+                            statusBadge.classList.add('status-loading');
+                            
+                            const hlsSrc = "{{ camera.stream_url }}";
                             
                             if (Hls.isSupported()) {
                                 const hls = new Hls({
                                     maxBufferLength: 30,
                                     maxMaxBufferLength: 600,
                                     maxBufferSize: 60*1000*1000,
-                                    maxBufferHole: 10.0
+                                    maxBufferHole: 10.0,
+                                    enableWorker: true,
+                                    lowLatencyMode: false
                                 });
+                                
                                 hls.loadSource(hlsSrc);
                                 hls.attachMedia(video);
+                                
                                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                                     video.play().catch(e => {
-                                        console.error("Avtoijro bloklandi:", e);
+                                        showError("Avtoijro bloklandi: " + e.message);
                                     });
+                                    statusBadge.classList.remove('status-loading');
+                                    statusBadge.classList.add('status-active');
                                 });
                                 
                                 hls.on(Hls.Events.ERROR, function(event, data) {
                                     if (data.fatal) {
+                                        statusBadge.classList.remove('status-loading', 'status-active');
+                                        statusBadge.classList.add('status-inactive');
+                                        
                                         switch(data.type) {
                                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                                console.error("Tarmoq xatosi, qayta urinilmoqda...");
+                                                showError("Tarmoq xatosi. Qayta urinilmoqda...");
                                                 hls.startLoad();
                                                 break;
                                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                                console.error("Media xatosi, qayta yuklanmoqda...");
+                                                showError("Media xatosi. Qayta yuklanmoqda...");
                                                 hls.recoverMediaError();
                                                 break;
                                             default:
                                                 hls.destroy();
-                                                video.innerHTML = '<div class="alert alert-danger m-2">Video yuklashda xato. Iltimos, sahifani yangilang.</div>';
+                                                showError("Video yuklashda xato. Iltimos, sahifani yangilang.");
                                         }
                                     }
                                 });
@@ -277,12 +285,37 @@
                                 video.src = hlsSrc;
                                 video.addEventListener('loadedmetadata', function() {
                                     video.play().catch(e => {
-                                        console.error("Avtoijro bloklandi:", e);
+                                        showError("Avtoijro bloklandi: " + e.message);
                                     });
+                                    statusBadge.classList.remove('status-loading');
+                                    statusBadge.classList.add('status-active');
+                                });
+                                
+                                video.addEventListener('error', function() {
+                                    statusBadge.classList.remove('status-loading', 'status-active');
+                                    statusBadge.classList.add('status-inactive');
+                                    showError("Video yuklashda xato");
                                 });
                             } else {
-                                video.innerHTML = '<div class="alert alert-warning m-2">Ushbu brauzerda video koʻrsatish qoʻllab-quvvatlanmaydi. Iltimos, Chrome yoki Firefox dan foydalaning.</div>';
+                                statusBadge.classList.remove('status-loading');
+                                statusBadge.classList.add('status-inactive');
+                                showError("Ushbu brauzerda video koʻrsatish qoʻllab-quvvatlanmaydi. Iltimos, Chrome yoki Firefox dan foydalaning.");
                             }
+                            
+                            function showError(message) {
+                                errorDiv.textContent = message;
+                                errorDiv.classList.remove('d-none');
+                            }
+                        });
+                    </script>
+                    {% elif not camera.is_active %}
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const videoContainer = document.getElementById("video{{ camera.id }}").parentElement;
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'error-message';
+                            errorDiv.textContent = "Kamera hozirda faol emas";
+                            videoContainer.appendChild(errorDiv);
                         });
                     </script>
                     {% endif %}
@@ -314,7 +347,9 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- HLS.js (faqat oddiy kameralar uchun) -->
+    {% if has_regular_cameras %}
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    {% endif %}
     
     <!-- Custom JS -->
     <script>
