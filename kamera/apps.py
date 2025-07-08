@@ -1,3 +1,5 @@
+# kamera/apps.py
+
 from django.apps import AppConfig
 import subprocess
 import os
@@ -9,25 +11,25 @@ class KameraConfig(AppConfig):
     name = 'kamera'
 
     def ready(self):
+        # Kodni faqat bitta ishga tushishida chaqilishiga chek qo'yamiz
+        if os.environ.get('RUN_MAIN') != 'true':
+            return
+
         from kamera.models import Camera
 
         def start_ffmpeg(camera):
-            # Har bir kamera uchun HLS papkasi
             stream_dir = os.path.join(settings.MEDIA_ROOT, f"hls/cam_{camera.id}")
             os.makedirs(stream_dir, exist_ok=True)
-
-            # Chiqish fayli nomi: stream.m3u8
             output_path = os.path.join(stream_dir, "stream.m3u8")
-
-            # RTSP URL
             rtsp_url = camera.rtsp_url()
 
-            # ffmpeg buyrug‘i
             cmd = [
                 "ffmpeg",
+                "-rtsp_transport", "tcp",
                 "-i", rtsp_url,
-                "-c:v", "libx264",
-                "-preset", "veryfast",  # Tez ishlashi uchun
+                "-vcodec", "libx264",
+                "-acodec", "aac",
+                "-preset", "veryfast",
                 "-f", "hls",
                 "-hls_time", "5",
                 "-hls_list_size", "6",
@@ -49,7 +51,5 @@ class KameraConfig(AppConfig):
             except Exception as e:
                 print("❌ Kameralarni ishga tushirishda xatolik:", e)
 
-        # Barcha kameralar uchun streamni fon jarayonda ishga tushirish
+        # Fon jarayonda barcha kameralarni boshlaymiz
         threading.Thread(target=start_all_cameras, daemon=True).start()
-
-
